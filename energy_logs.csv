@@ -1,0 +1,8 @@
+timestamp,plant_id,source,energy_kwh,temperature_c,wind_speed_mps,status
+2025-11-01T00:00:00Z,PLANT-A,solar,500,31,2,OK
+2025-11-01T01:00:00Z,PLANT-A,solar,450,29,2,OK
+2025-11-01T02:00:00Z,PLANT-B,wind,700,26,6,OK
+2025-11-01T03:00:00Z,PLANT-C,hydro,800,25,0,OK
+2025-11-01T04:00:00Z,PLANT-B,wind,680,27,5,FAULT
+2025-11-01T05:00:00Z,PLANT-A,solar,600,33,3,OK
+

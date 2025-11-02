@@ -1,0 +1,112 @@
+-- ================================
+-- Renewable Energy Production Logs Analysis
+-- ================================
+
+-- 1️⃣ Create a dedicated database
+CREATE DATABASE IF NOT EXISTS renewable_energy;
+USE renewable_energy;
+
+-- 2️⃣ Drop the table if it already exists (optional for reruns)
+DROP TABLE IF EXISTS energy_logs;
+
+-- 3️⃣ Create an external Hive table linked to your HDFS CSV
+CREATE EXTERNAL TABLE energy_logs (
+  timestamp STRING,
+  plant_id STRING,
+  source STRING,
+  energy_kwh INT,
+  temperature_c FLOAT,
+  wind_speed_mps FLOAT,
+  status STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/user/cloudera/renewable/raw'
+TBLPROPERTIES ('skip.header.line.count'='1');
+
+-- 4️⃣ Preview a few rows
+SELECT * FROM energy_logs LIMIT 10;
+
+-- 5️⃣ Total energy produced by each renewable source
+SELECT 
+  source, 
+  SUM(energy_kwh) AS total_energy_kwh
+FROM energy_logs
+GROUP BY source
+ORDER BY total_energy_kwh DESC;
+
+-- 6️⃣ Average temperature for each source type
+SELECT 
+  source,
+  ROUND(AVG(temperature_c), 2) AS avg_temperature
+FROM energy_logs
+GROUP BY source;
+
+-- 7️⃣ Average wind speed recorded for each plant
+SELECT 
+  plant_id,
+  ROUND(AVG(wind_speed_mps), 2) AS avg_wind_speed
+FROM energy_logs
+GROUP BY plant_id;
+
+-- 8️⃣ Count of faulty records per plant
+SELECT 
+  plant_id,
+  COUNT(*) AS fault_count
+FROM energy_logs
+WHERE status = 'FAULT'
+GROUP BY plant_id;
+
+-- 9️⃣ Energy trend by plant and source
+SELECT 
+  plant_id,
+  source,
+  ROUND(AVG(energy_kwh), 2) AS avg_energy
+FROM energy_logs
+GROUP BY plant_id, source
+ORDER BY plant_id;
+
+-- 🔟 Maximum and minimum energy production by source
+SELECT 
+  source,
+  MAX(energy_kwh) AS max_energy,
+  MIN(energy_kwh) AS min_energy
+FROM energy_logs
+GROUP BY source;
+
+-- 11️⃣ Hourly summary (extracting hour from timestamp)
+-- Hive doesn’t support direct datetime parsing from ISO strings by default,
+-- but you can use substring to get the hour from timestamp.
+SELECT 
+  SUBSTR(timestamp, 12, 2) AS hour,
+  ROUND(AVG(energy_kwh), 2) AS avg_energy_kwh
+FROM energy_logs
+GROUP BY SUBSTR(timestamp, 12, 2)
+ORDER BY hour;
+
+-- 12️⃣ Total energy output across all sources
+SELECT SUM(energy_kwh) AS total_production_kwh FROM energy_logs;
+
+-- 13️⃣ Filtered view – only working (non-faulty) records
+SELECT * 
+FROM energy_logs
+WHERE status = 'OK'
+ORDER BY timestamp;
+
+-- 14️⃣ Create a managed summary table for dashboards
+CREATE TABLE IF NOT EXISTS energy_summary AS
+SELECT 
+  source,
+  COUNT(*) AS total_records,
+  SUM(energy_kwh) AS total_energy,
+  ROUND(AVG(energy_kwh),2) AS avg_energy,
+  ROUND(AVG(temperature_c),2) AS avg_temp,
+  ROUND(AVG(wind_speed_mps),2) AS avg_wind_speed
+FROM energy_logs
+GROUP BY source;
+
+-- 15️⃣ Verify the summary table
+SELECT * FROM energy_summary;
+
+-- ✅ End of script
